@@ -1,0 +1,19 @@
+body {
+    background-image: url('FB_IMG_17192629414325994.jpg');
+} 
+
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 15px 25px;
+            font-size: 16px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+        }
+.game-container {
+    border:5px solid green
+}
+#timer{
+    background-color: green
+}
