@@ -1,95 +1,297 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Car Racing Game</title>
-<style>
-    .game-container {
-        width: 129%;
-        height: 400px;
-        background-image:url(FB_IMG_17192629483136441.jpg);
-        position: relative;
-        border-radius:10px
-    }
-    .car {
-        width: 0;
-        height: 0;
-        border-left: 80px solid transparent ;
-        border-right: 20px solid red ;
-        border-bottom: 44px solid blue;
-        position: absolute;
-        top: 0;
-        left: 0;
-        border-radius:10px
-    }
-</style>
-<link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu de Tir</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #222;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+       
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+        }
+        #healthBar {
+            width: 100px;
+            height: 20px;
+            background: red;
+            border: 6px solid white;
+            border-radius: 10px;
+        }
+        #health {
+            height: 100%;
+            background: green;
+            border-radius: 4px;
+        }
+        #score {
+            margin-top: 20px;
+            font-size: 2em;            
+        }
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 50px;
+            display: none;
+            color:yellow;
+        }
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+        }
+        .button {
+            width: 100px;
+            height: 50px;
+            background: gray;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            font-size: 2em
+        }
+  .butto {
+            width: 50px;
+            height: 50px;
+            background: gray;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            font-size: 2em
+        }
+        
+        #restartButton {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 7px 17px;
+            background-color: grey;
+            color: white;
+            border: 6px solid white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+    </style>
+    <link rel="stylesheet" href="container.css">
 </head>
 <body>
-<div class="game-container" id="gameContainer"></div>
-<div><h1>Score: <span id="score">0</h1></span></div>
-<div><h1>vaisseaux explosés: <span id="carsExploded">0</span></h1></div>
-<div id="timer"> <h1>Time Left: 60 </h1></div>
-<button onclick="restartGame()">Restart</button>
+    <div id="hud">
+        <div id="healthBar">
+            <div id="health"></div>
+        </div>
+        <div id="score">Score: 0</div>
+    </div>
+    <div id="message"></div>
+    <canvas id="gameCanvas"></canvas>
+    <div id="controls">
+        <div id="left" class="button">⫷</div>
+        <div id="fire" class="butto">🔘</div>
+        <div id="right" class="button">⫸</div>
+    </div>
+     <button id="restartButton">RESTART</button>
 
-<script>
-let score = 0;
-let carsExploded = 0;
-let timer = 60;
-let interval;
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const healthBar = document.getElementById('health');
+        const scoreElement = document.getElementById('score');
+        const messageElement = document.getElementById('message');
+        const leftButton = document.getElementById('left');
+        const rightButton = document.getElementById('right');
+        const fireButton = document.getElementById('fire');
 
-function createCar() {
-    const car = document.createElement('div');
-    car.classList.add('car');
-    car.style.left = '0';
-    car.style.top = Math.floor(Math.random() * 350) + 'px';
-    car.style.transition = 'left 1s linear';
-    car.onclick = () => {
-        explodeCar(car);
-    };
-    document.getElementById('gameContainer').appendChild(car);
-    
-    setTimeout(() => {
-        car.style.left = '100%';
-    }, 10);
-}
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
-function explodeCar(car) {
-    car.style.display = 'none';
-    score += 100;
-    carsExploded++;
-    document.getElementById('score').innerText = score;
-    document.getElementById('carsExploded').innerText = carsExploded;
-}
+        let player = {
+            x: canvas.width / 2,
+            y: canvas.height - 100,
+            radius: 25,
+            color: '#ffdfaad3',
+            dx: 5,
+            bullets: [],
+            health: 100
+        };
 
-function updateTimer() {
-    timer--;
-    document.getElementById('timer').innerText = 'Time Left: ' + timer;
-    if (timer === 0) {
-        clearInterval(interval);
-    }
-}
+        let enemies = [];
+        let score = 0;
+        let killedEnemies = 0;
+        let gameRunning = true;
 
-function restartGame() {
-    score = 0;
-    carsExploded = 0;
-    timer = 60;
-    document.getElementById('score').innerText = score;
-    document.getElementById('carsExploded').innerText = carsExploded;
-    document.getElementById('timer').innerText = 'Time Left: 60';
-    document.getElementById('gameContainer').innerHTML = '';
-    startGame();
-}
+        function createEnemy() {
+            const x = Math.random() * (canvas.width - 30);
+            enemies.push({ x, y: 0, radius: 15, color: '#7e6979e9', dy: 2, bullets: [] });
+        }
 
-function startGame() {
-    interval = setInterval(() => {
-        createCar();
-    }, 1000);
-    setInterval(updateTimer, 1000);
-}
+        function drawCircle(obj) {
+            ctx.fillStyle = obj.color;
+            ctx.beginPath();
+            ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.closePath();
 
-startGame();
-</script>
+            // Draw head
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(obj.x, obj.y - obj.radius / 2, obj.radius / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.closePath();
+
+            // Draw gun
+            ctx.fillStyle = '#55eaff';
+            ctx.fillRect(obj.x - 5, obj.y, 10, 20);
+        }
+
+        function drawPlayer() {
+            drawCircle(player);
+
+            // Draw head
+            ctx.fillStyle = '#55eaff';
+            ctx.beginPath();
+            ctx.arc(player.x, player.y - player.radius / 2, player.radius / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.closePath();
+
+            // Draw gun
+            ctx.fillStyle = 'white';
+            ctx.fillRect(player.x - 5, player.y, 10, 20);            
+        }
+
+        function updatePlayer() {
+            if (rightPressed && player.x + player.radius < canvas.width) {
+                player.x += player.dx;
+            }
+            if (leftPressed && player.x - player.radius > 0) {
+                player.x -= player.dx;
+            }
+        }
+
+        function updateBullets() {
+            player.bullets.forEach((bullet, index) => {
+                bullet.y -= 5;
+                if (bullet.y < 0) {
+                    player.bullets.splice(index, 1);
+                }
+            });
+        }
+
+        function updateEnemies() {
+            enemies.forEach((enemy, index) => {
+                enemy.y += enemy.dy;
+                if (enemy.y > canvas.height - 100) {
+                    enemies.splice(index, 1);
+                }
+                if (Math.random() < 0.01) {
+                    enemy.bullets.push({ x: enemy.x, y: enemy.y + enemy.radius, width: 5, height: 10, color: 'red' });
+                }
+                enemy.bullets.forEach((bullet, bulletIndex) => {
+                    bullet.y += 5;
+                    if (bullet.y > canvas.height) {
+                        enemy.bullets.splice(bulletIndex, 1);
+                    }
+                    if (bullet.y > player.y - player.radius && bullet.y < player.y + player.radius && bullet.x > player.x - player.radius && bullet.x < player.x + player.radius) {
+                        enemy.bullets.splice(bulletIndex, 1);
+                        player.health -= 7;
+                        healthBar.style.width = player.health + 'px';
+                        if (player.health <= 0) {
+                            gameRunning = false;
+                            messageElement.textContent = `bravo! ton Score est de: ${score}, tu as tués: ${killedEnemies} enemie`;
+                            messageElement.style.display = 'block';
+                        }
+                    }
+                });
+            });
+        }
+
+        function collisionDetection() {
+            player.bullets.forEach((bullet, bulletIndex) => {
+                enemies.forEach((enemy, enemyIndex) => {
+                    if (bullet.y < enemy.y + enemy.radius && bullet.y + bullet.height > enemy.y - enemy.radius && bullet.x < enemy.x + enemy.radius && bullet.x + bullet.width > enemy.x - enemy.radius) {
+                        enemies.splice(enemyIndex, 1);
+                        player.bullets.splice(bulletIndex, 1);
+                        score += 10;
+                        killedEnemies += 1;
+                        scoreElement.textContent = `Score: ${score}`;
+                    }
+                });
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawPlayer();
+            player.bullets.forEach(bullet => {
+                ctx.fillStyle = bullet.color;
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
+            enemies.forEach(drawCircle);
+            enemies.forEach(enemy => {
+                enemy.bullets.forEach(bullet => {
+                    ctx.fillStyle = bullet.color;
+                    ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+                });
+            });
+        }
+
+        function update() {
+            updatePlayer();
+            updateBullets();
+            updateEnemies();
+            collisionDetection();
+        }
+
+        function loop() {
+            if (gameRunning) {
+                draw();
+                update();
+                requestAnimationFrame(loop);
+            }
+        }
+
+        let rightPressed = false;
+        let leftPressed = false;
+
+        leftButton.addEventListener('mousedown', () => { leftPressed = true; });
+        leftButton.addEventListener('mouseup', () => { leftPressed = false; });
+        leftButton.addEventListener('touchstart', () => { leftPressed = true; });
+        leftButton.addEventListener('touchend', () => { leftPressed = false; });
+
+        rightButton.addEventListener('mousedown', () => { rightPressed = true; });
+        rightButton.addEventListener('mouseup', () => { rightPressed = false; });
+        rightButton.addEventListener('touchstart', () => { rightPressed = true; });
+        rightButton.addEventListener('touchend', () => { rightPressed = false; });
+
+        fireButton.addEventListener('mousedown', () => {
+            player.bullets.push({ x: player.x, y: player.y - player.radius, width: 5, height: 10, color: 'blue' });
+        });
+        fireButton.addEventListener('touchstart', () => {
+            player.bullets.push({ x: player.x, y: player.y - player.radius, width: 5, height: 10, color: 'blue' });
+        });
+
+        setInterval(createEnemy, 1000);
+
+        loop();
+         document.getElementById('restartButton').addEventListener('click', function() {
+            location.reload();
+        });
+    </script>
 </body>
-</html>
+    </html>
