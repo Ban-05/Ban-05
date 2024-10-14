@@ -1,4 +1,0 @@
-Flask
-pymongo
-werkzeug
-PyJWT
