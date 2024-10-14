@@ -1,0 +1,4 @@
+# Ignorer le contenu du dossier uploads
+backend/uploads/*
+# Ne pas ignorer le fichier .gitkeep
+!backend/uploads/.gitkeep
